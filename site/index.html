@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#f7f8fa" />
+  <meta name="description" content="Interactive map of a 2017 road trip through Europe." />
+  <title>Europe Trip 2017</title>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin />
+  <link rel="preconnect" href="https://tile.openstreetmap.org" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <aside id="sidebar" class="sidebar" aria-label="Trip navigation">
+      <header class="brand-block">
+        <div class="brand-row">
+          <div class="brand-mark" aria-hidden="true">EU</div>
+          <div>
+            <p class="eyebrow">TRAVEL ARCHIVE</p>
+            <h1>Europe Trip 2017</h1>
+          </div>
+          <button id="closeSidebar" class="icon-button mobile-only" type="button" aria-label="Close days panel">×</button>
+        </div>
+        <div id="tripMeta" class="trip-meta"></div>
+      </header>
+
+      <section id="selectedSummary" class="selected-summary"></section>
+
+      <div class="day-list-header">
+        <span>Trip days</span>
+        <button id="overviewButton" class="text-button" type="button">Entire trip</button>
+      </div>
+      <nav id="dayList" class="day-list" aria-label="Trip days"></nav>
+    </aside>
+
+    <main class="map-stage">
+      <div id="map" aria-label="Interactive trip map"></div>
+
+      <header class="map-toolbar" aria-label="Map controls">
+        <button id="openSidebar" class="toolbar-button mobile-only" type="button">Days</button>
+        <button id="previousDay" class="toolbar-button" type="button" aria-label="Previous day">←</button>
+        <div id="currentTitle" class="current-title">
+          <span class="current-kicker">ENTIRE TRIP</span>
+          <strong>Europe 2017</strong>
+        </div>
+        <button id="nextDay" class="toolbar-button" type="button" aria-label="Next day">→</button>
+        <div class="toolbar-spacer"></div>
+        <button id="rawToggle" class="toolbar-button toolbar-button-wide" type="button" aria-pressed="false">Raw GPS</button>
+        <button id="photosButton" class="toolbar-button toolbar-button-primary" type="button">Photos</button>
+      </header>
+
+      <div id="overviewLegend" class="overview-legend"></div>
+
+      <section id="timelinePlayer" class="timeline-player" aria-label="Day playback" hidden>
+        <button id="playButton" class="play-button" type="button" aria-label="Play day">▶</button>
+        <div class="timeline-content">
+          <div class="timeline-labels">
+            <span id="timelineDate"></span>
+            <span id="timelineCountry" class="timeline-country"></span>
+            <strong id="timelineTime">--:--</strong>
+          </div>
+          <input id="timelineSlider" class="timeline-slider" type="range" min="0" max="1000" value="0" step="1" aria-label="Time of day" />
+        </div>
+      </section>
+
+      <div id="mapNotice" class="map-notice" role="status" hidden></div>
+    </main>
+  </div>
+
+  <dialog id="photoDialog" class="photo-dialog">
+    <div class="photo-dialog-header">
+      <div>
+        <p class="eyebrow">TRIP PHOTOS</p>
+        <h2 id="photoDialogTitle">Photos</h2>
+      </div>
+      <button id="closePhotoDialog" class="icon-button" type="button" aria-label="Close photo gallery">×</button>
+    </div>
+    <div id="photoGrid" class="photo-grid"></div>
+    <div id="photoEmpty" class="photo-empty" hidden>
+      <p>No embedded photos have been added for this day yet.</p>
+      <button id="photoEmptyGoogle" class="secondary-action" type="button">Open this date in Google Photos</button>
+    </div>
+  </dialog>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="app.js" defer></script>
+</body>
+</html>
