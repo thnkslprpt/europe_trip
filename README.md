@@ -25,7 +25,8 @@ A static GitHub Pages site built from the Google Timeline export for the 2017 Eu
 scripts/build_trip_data.py        Timeline -> public map data
 scripts/data/                     Bundled offline country boundaries
 scripts/build_photo_manifest.py   Builds embedded-photo index
-scripts/import_photos.py          Optional helper for downloaded Google Photos
+scripts/import_photos.py          Optional helper for downloaded/exported photos
+scripts/import_google_photos.py   Google Photos Picker importer
 site/                             Only this directory is published
   index.html
   app.js
@@ -226,13 +227,96 @@ The GitHub Actions workflow also rebuilds the trip data and photo manifest on ev
 - Exact route data published in `site/data/` is publicly accessible as part of the public Pages site.
 - Third-party data notices are in `THIRD_PARTY_NOTICES.md`.
 
-## Google Photos direct access
+## Google Photos Picker setup
 
-The published site does not currently sign in to Google Photos or read the private Google Photos library. The "Google Photos" buttons only open the selected date in Google Photos for the browser's signed-in account.
+The published site itself does **not** sign in to Google Photos. Instead, the local helper `scripts/import_google_photos.py` uses Google's supported **Google Photos Picker API** to let you explicitly select media from your private library, download sanitized public copies into the repository, and then publish those copies with GitHub Pages.
 
-Google changed the Photos APIs in 2025: third-party apps can no longer list/search an existing user's whole Photos library. The supported Picker API lets the signed-in user explicitly choose photos, and the returned media URLs are temporary. For permanent photos on this public static site, the reliable approach is to copy selected photos into `site/photos/YYYY-MM-DD/` (manually or with the included importer) and commit those copies.
+Google changed the Photos APIs in 2025: third-party apps can no longer list/search an existing user's whole Photos library by date. The Picker API requires the user to choose the media to share. Picker media URLs are temporary, so the importer downloads permanent copies into `site/photos/YYYY-MM-DD/`.
 
-A future optional helper can use the Google Photos Picker API locally: choose a trip day, authorize Google Photos, pick the desired media, and download sanitized copies straight into that day's `site/photos/` folder before committing them.
+### One-time Google Cloud setup
+
+1. Open Google Cloud Console and create/select a project, for example **Europe Trip Photo Importer**.
+2. Go to **APIs & Services -> Library** and search for **Google Photos Picker API**. Enable it. Do **not** accidentally enable the similarly named **Google Picker API**; that is a different API.
+3. Configure the Google Auth/OAuth consent screen if prompted. For a personal Gmail account, use an external audience and keep the app in **Testing** while this is just for you. Add your Google account as a test user if Google asks for test users.
+4. Create an **OAuth 2.0 Client ID** with application type **Desktop app**. A desktop client is convenient here because the importer runs locally and Google supports loopback/localhost OAuth for desktop apps.
+5. Download the OAuth client JSON and save it in the repository root as:
+
+```text
+google-photos-oauth-client.json
+```
+
+The repository `.gitignore` excludes this file and the cached OAuth token. Do not commit either credential file.
+
+Install the photo/import dependencies once. On Ubuntu, a project virtual environment is the cleanest option:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements-photos.txt
+```
+
+For later imports, enter the repository and reactivate it with `source .venv/bin/activate` first. The `.venv/` directory is gitignored.
+
+### Import one trip day from Google Photos
+
+For example, to import Thursday 3 August 2017:
+
+```bash
+python3 scripts/import_google_photos.py --date 2017-08-03
+```
+
+The first run opens Google sign-in in your browser. After you authorize the app, the script creates a Photos Picker session and opens the official Google Photos picker. Navigate to the requested date, select the photos you want on the trip site, and click **Done**.
+
+The helper then:
+
+- waits for the Picker session to finish;
+- retrieves only the media you explicitly selected;
+- checks each photo's Picker `createTime` against the requested trip date (allowing for the trip's European time zones);
+- downloads the selected photo bytes while the temporary Picker URLs are valid;
+- resizes images to at most 2000 px;
+- converts them to web-friendly progressive JPEGs;
+- deliberately writes no EXIF metadata to the public copy;
+- stores them under `site/photos/YYYY-MM-DD/`;
+- automatically rebuilds `site/photos/manifest.json`;
+- deletes the Picker session when finished.
+
+The helper currently skips selected videos; the trip site's existing gallery can support videos, but importing video safely while stripping metadata is a separate step.
+
+If you accidentally choose a photo from another day, it is skipped by default. If an old Google Photos timestamp is genuinely wrong and you intentionally want it in that day, run:
+
+```bash
+python3 scripts/import_google_photos.py --date 2017-08-03 --allow-date-mismatch
+```
+
+The OAuth access/refresh token is cached locally in `.google-photos-token.json`, so later day imports normally do not require another full sign-in:
+
+```bash
+python3 scripts/import_google_photos.py --date 2017-08-04
+python3 scripts/import_google_photos.py --date 2017-08-05
+```
+
+If you ever want to force a completely fresh Google authorization, delete the local cached token:
+
+```bash
+rm .google-photos-token.json
+```
+
+After importing, preview locally:
+
+```bash
+python3 -m http.server 8000 -d site
+```
+
+Then commit the public photo copies and push:
+
+```bash
+git add site/photos requirements-photos.txt scripts/import_google_photos.py .gitignore README.md
+git commit -m "Add Google Photos Picker importer and trip photos"
+git push
+```
+
+Anything committed under `site/photos/` is intentionally public on the GitHub Pages site. Your Google Photos OAuth credentials/token remain local and private.
 
 ## Sidebar scrolling/layout
 
