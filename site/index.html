@@ -58,6 +58,18 @@
 
       <div id="overviewLegend" class="overview-legend"></div>
 
+      <section id="photoFilmstrip" class="photo-filmstrip" aria-label="Photos from this day" hidden>
+        <button id="photoFilmstripPrev" class="photo-filmstrip-arrow" type="button" aria-label="Previous photos">‹</button>
+        <div class="photo-filmstrip-body">
+          <div class="photo-filmstrip-heading">
+            <span id="photoFilmstripLabel">Trip photos</span>
+            <button id="photoFilmstripViewAll" class="photo-filmstrip-view-all" type="button">View all</button>
+          </div>
+          <div id="photoFilmstripTrack" class="photo-filmstrip-track" tabindex="0" aria-label="Photo carousel"></div>
+        </div>
+        <button id="photoFilmstripNext" class="photo-filmstrip-arrow" type="button" aria-label="Next photos">›</button>
+      </section>
+
       <section id="timelinePlayer" class="timeline-player" aria-label="Day playback" hidden>
         <button id="playButton" class="play-button" type="button" aria-label="Play day">▶</button>
         <div class="timeline-content">

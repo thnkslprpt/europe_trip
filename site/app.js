@@ -8,6 +8,8 @@
     rawVisible: false,
     playTimer: null,
     playbackIndex: 0,
+    photoFilmstripSyncing: false,
+    photoFilmstripScrollRaf: 0,
   };
 
   const els = {
@@ -21,6 +23,12 @@
     nextDay: document.getElementById('nextDay'),
     rawToggle: document.getElementById('rawToggle'),
     photosButton: document.getElementById('photosButton'),
+    photoFilmstrip: document.getElementById('photoFilmstrip'),
+    photoFilmstripTrack: document.getElementById('photoFilmstripTrack'),
+    photoFilmstripLabel: document.getElementById('photoFilmstripLabel'),
+    photoFilmstripPrev: document.getElementById('photoFilmstripPrev'),
+    photoFilmstripNext: document.getElementById('photoFilmstripNext'),
+    photoFilmstripViewAll: document.getElementById('photoFilmstripViewAll'),
     timelinePlayer: document.getElementById('timelinePlayer'),
     timelineSlider: document.getElementById('timelineSlider'),
     timelineTime: document.getElementById('timelineTime'),
@@ -141,6 +149,119 @@
 
   function photoItemsFor(date) {
     return state.photos?.dates?.[date] || [];
+  }
+
+  function photoTimeLabel(item) {
+    const match = String(item?.src || '').match(/\d{4}-\d{2}-\d{2}_(\d{2})(\d{2})(\d{2})_/);
+    return match ? `${match[1]}:${match[2]}` : '';
+  }
+
+  function renderPhotoFilmstrip(day) {
+    if (!els.photoFilmstrip || !els.photoFilmstripTrack) return;
+
+    const items = day ? photoItemsFor(day.date) : [];
+    if (!day || !items.length) {
+      els.photoFilmstrip.hidden = true;
+      els.photoFilmstripTrack.innerHTML = '';
+      return;
+    }
+
+    els.photoFilmstrip.hidden = false;
+    // If a rare day has no playable GPS timeline, let the photo strip use the bottom slot.
+    els.photoFilmstrip.classList.toggle('timeline-hidden', els.timelinePlayer.hidden);
+    els.photoFilmstripLabel.textContent = `${items.length} ${items.length === 1 ? 'photo' : 'photos'} · ${formatDate(day.date, { weekday: true })}`;
+    els.photoFilmstripTrack.innerHTML = '';
+
+    items.forEach((item, index) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'photo-filmstrip-item';
+      button.setAttribute('aria-label', `Open photo ${index + 1} of ${items.length}`);
+
+      if (item.type === 'video') {
+        const video = document.createElement('video');
+        video.src = item.src;
+        video.muted = true;
+        video.preload = 'metadata';
+        button.appendChild(video);
+        const badge = document.createElement('span');
+        badge.className = 'photo-filmstrip-video-badge';
+        badge.textContent = '▶';
+        button.appendChild(badge);
+      } else {
+        const img = document.createElement('img');
+        img.src = item.src;
+        img.alt = item.name || `Trip photo ${index + 1}`;
+        img.loading = index < 8 ? 'eager' : 'lazy';
+        img.decoding = 'async';
+        button.appendChild(img);
+      }
+
+      const time = photoTimeLabel(item);
+      if (time) {
+        const timeBadge = document.createElement('span');
+        timeBadge.className = 'photo-filmstrip-time';
+        timeBadge.textContent = time;
+        button.appendChild(timeBadge);
+      }
+
+      // The photos are visible without any click. Clicking a thumbnail remains a
+      // convenient way to open the existing full gallery.
+      button.addEventListener('click', openPhotoDialog);
+      els.photoFilmstripTrack.appendChild(button);
+    });
+
+    // Each day starts at the first photo rather than inheriting the previous day's scroll.
+    els.photoFilmstripTrack.scrollLeft = 0;
+    window.requestAnimationFrame(updatePhotoFilmstripButtons);
+  }
+
+  function photoFilmstripStep() {
+    if (!els.photoFilmstripTrack) return 360;
+    return Math.max(260, Math.round(els.photoFilmstripTrack.clientWidth * 0.72));
+  }
+
+  function updatePhotoFilmstripButtons() {
+    if (!els.photoFilmstripTrack || els.photoFilmstrip.hidden) return;
+    const track = els.photoFilmstripTrack;
+    const max = Math.max(0, track.scrollWidth - track.clientWidth);
+    els.photoFilmstripPrev.disabled = track.scrollLeft <= 3;
+    els.photoFilmstripNext.disabled = track.scrollLeft >= max - 3;
+  }
+
+  function photoFilmstripMaxScroll() {
+    if (!els.photoFilmstripTrack) return 0;
+    return Math.max(0, els.photoFilmstripTrack.scrollWidth - els.photoFilmstripTrack.clientWidth);
+  }
+
+  function syncPhotoFilmstripToTimeline(value) {
+    if (!els.photoFilmstripTrack || els.photoFilmstrip.hidden) return;
+    const maxScroll = photoFilmstripMaxScroll();
+    if (maxScroll <= 0) return;
+
+    // Deliberately map by relative position rather than photo timestamps:
+    // first photo = start of day, last photo = end of day.
+    const ratio = Math.max(0, Math.min(1, Number(value) / 1000));
+    state.photoFilmstripSyncing = true;
+    els.photoFilmstripTrack.scrollLeft = maxScroll * ratio;
+    window.requestAnimationFrame(() => {
+      state.photoFilmstripSyncing = false;
+    });
+  }
+
+  function syncTimelineToPhotoFilmstrip() {
+    if (state.photoFilmstripSyncing) return;
+    const day = selectedDay();
+    if (!day || day.rawPoints.length < 2 || els.photoFilmstrip.hidden) return;
+
+    const maxScroll = photoFilmstripMaxScroll();
+    if (maxScroll <= 0) return;
+
+    const ratio = Math.max(0, Math.min(1, els.photoFilmstripTrack.scrollLeft / maxScroll));
+    const value = Math.round(ratio * 1000);
+    stopPlayback();
+    els.timelineSlider.value = String(value);
+    updatePlaybackMarker(value, { syncPhotos: false });
   }
 
   function googlePhotosUrl(date) {
@@ -458,10 +579,11 @@
     renderDayList();
     renderSelectedSummary(day);
     renderToolbar(day);
+    renderPhotoFilmstrip(day);
     els.rawToggle.setAttribute('aria-pressed', String(state.rawVisible));
   }
 
-  function updatePlaybackMarker(value) {
+  function updatePlaybackMarker(value, options = {}) {
     const day = selectedDay();
     playbackLayer.clearLayers();
     if (!day || !day.rawPoints.length) return;
@@ -473,6 +595,7 @@
     els.timelineCountry.textContent = point.country ? `${flagEmoji(point.countryCode)} ${point.country}` : '';
     const icon = L.divIcon({ className: '', html: '<div class="playback-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
     L.marker([point.lat, point.lon], { icon, interactive: false, zIndexOffset: 1000 }).addTo(playbackLayer);
+    if (options.syncPhotos !== false) syncPhotoFilmstripToTimeline(value);
   }
 
   function startPlayback() {
@@ -564,6 +687,48 @@
     showNotice(state.rawVisible ? 'Raw Europe GPS points shown.' : 'Raw GPS points hidden.');
   });
   els.photosButton.addEventListener('click', openPhotoDialog);
+  els.photoFilmstripPrev.addEventListener('click', () => {
+    stopPlayback();
+    els.photoFilmstripTrack.scrollBy({ left: -photoFilmstripStep(), behavior: 'smooth' });
+  });
+  els.photoFilmstripNext.addEventListener('click', () => {
+    stopPlayback();
+    els.photoFilmstripTrack.scrollBy({ left: photoFilmstripStep(), behavior: 'smooth' });
+  });
+  els.photoFilmstripViewAll.addEventListener('click', openPhotoDialog);
+  els.photoFilmstripTrack.addEventListener('scroll', () => {
+    updatePhotoFilmstripButtons();
+    window.cancelAnimationFrame(state.photoFilmstripScrollRaf);
+    state.photoFilmstripScrollRaf = window.requestAnimationFrame(syncTimelineToPhotoFilmstrip);
+  }, { passive: true });
+  els.photoFilmstripTrack.addEventListener('wheel', event => {
+    // A normal mouse wheel moves the horizontal filmstrip; trackpads keep their
+    // native horizontal gesture. Do not hijack scrolling when there is nowhere to go.
+    if (els.photoFilmstripTrack.scrollWidth <= els.photoFilmstripTrack.clientWidth) return;
+    if (Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      stopPlayback();
+      els.photoFilmstripTrack.scrollLeft += event.deltaY;
+      event.preventDefault();
+    }
+  }, { passive: false });
+  window.addEventListener('resize', updatePhotoFilmstripButtons);
+  function refreshMobileVisualViewport() {
+    // Mobile browser chrome changes the visual viewport while scrolling/rotating.
+    // Re-measure Leaflet and the photo strip so bottom controls stay aligned.
+    window.clearTimeout(refreshMobileVisualViewport.timer);
+    refreshMobileVisualViewport.timer = window.setTimeout(() => {
+      map.invalidateSize({ pan: false });
+      updatePhotoFilmstripButtons();
+      const day = selectedDay();
+      if (day && !els.photoFilmstrip.hidden) {
+        syncPhotoFilmstripToTimeline(els.timelineSlider.value);
+      }
+    }, 90);
+  }
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', refreshMobileVisualViewport, { passive: true });
+  }
+  window.addEventListener('orientationchange', refreshMobileVisualViewport, { passive: true });
   els.timelineSlider.addEventListener('input', event => { stopPlayback(); updatePlaybackMarker(event.target.value); });
   els.playButton.addEventListener('click', () => state.playTimer ? stopPlayback() : startPlayback());
   els.closePhotoDialog.addEventListener('click', () => els.photoDialog.close());

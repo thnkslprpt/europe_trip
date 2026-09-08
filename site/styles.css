@@ -342,7 +342,7 @@ h1 { margin: 0; font-size: 21px; line-height: 1.12; letter-spacing: -.02em; }
   display: block;
   margin-top: 3px;
   color: #657086;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 720;
   white-space: nowrap;
   overflow: hidden;
@@ -427,4 +427,365 @@ h1 { margin: 0; font-size: 21px; line-height: 1.12; letter-spacing: -.02em; }
 @media (max-width: 760px) {
   .current-title .current-countryline { max-width: 42vw; }
   .timeline-country { max-width: 42vw; }
+}
+
+
+/* Bottom photo carousel */
+.photo-filmstrip {
+  position: absolute;
+  z-index: 700;
+  left: 50%;
+  bottom: 94px;
+  transform: translateX(-50%);
+  width: min(1180px, calc(100% - 40px));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(225,229,236,.94);
+  border-radius: 16px;
+  background: rgba(255,255,255,.96);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+.photo-filmstrip[hidden] { display: none; }
+.photo-filmstrip.timeline-hidden { bottom: 22px; }
+.photo-filmstrip-body { min-width: 0; }
+.photo-filmstrip-heading {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 5px;
+  color: #687286;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.photo-filmstrip-view-all {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.photo-filmstrip-track {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  border-radius: 10px;
+}
+.photo-filmstrip-track::-webkit-scrollbar { display: none; }
+.photo-filmstrip-track:focus-visible {
+  outline: 2px solid rgba(31,92,255,.5);
+  outline-offset: 2px;
+}
+.photo-filmstrip-item {
+  position: relative;
+  flex: 0 0 190px;
+  width: 190px;
+  height: 126px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: #e9edf2;
+  cursor: pointer;
+  scroll-snap-align: start;
+  box-shadow: inset 0 0 0 1px rgba(15,23,42,.06);
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.photo-filmstrip-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 14px rgba(20,23,31,.18);
+}
+.photo-filmstrip-item:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.photo-filmstrip-item img,
+.photo-filmstrip-item video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.photo-filmstrip-time {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(15,23,42,.72);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
+  backdrop-filter: blur(3px);
+}
+.photo-filmstrip-video-badge {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(15,23,42,.72);
+  color: #fff;
+  font-size: 10px;
+}
+.photo-filmstrip-arrow {
+  width: 42px;
+  height: 102px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e4e8ef;
+  border-radius: 10px;
+  background: #fff;
+  color: #465166;
+  cursor: pointer;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 1;
+  transition: background .14s ease, opacity .14s ease;
+}
+.photo-filmstrip-arrow:hover:not(:disabled) { background: #f4f6fa; }
+.photo-filmstrip-arrow:disabled { opacity: .28; cursor: default; }
+
+@media (max-width: 760px) {
+  .photo-filmstrip {
+    bottom: 88px;
+    width: calc(100% - 20px);
+    grid-template-columns: 32px minmax(0, 1fr) 32px;
+    gap: 5px;
+    padding: 6px;
+    border-radius: 14px;
+  }
+  .photo-filmstrip.timeline-hidden { bottom: 12px; }
+  .photo-filmstrip-item {
+    flex-basis: 132px;
+    width: 132px;
+    height: 92px;
+  }
+  .photo-filmstrip-arrow {
+    width: 30px;
+    height: 76px;
+    font-size: 21px;
+  }
+  .photo-filmstrip-heading { font-size: 8px; }
+}
+
+
+/* Photo carousel v3: full-image cards + mobile-safe bottom controls */
+
+/* Taller cards use a near-4:3 frame. 'contain' is deliberate: the full photo,
+   including heads/tops, remains visible instead of being cropped by object-fit: cover. */
+.photo-filmstrip {
+  bottom: 104px;
+  width: min(1320px, calc(100% - 32px));
+}
+.photo-filmstrip-item {
+  flex: 0 0 210px;
+  width: 210px;
+  height: 158px;
+  background: #e9edf2;
+}
+.photo-filmstrip-item img,
+.photo-filmstrip-item video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  background: #e9edf2;
+}
+.photo-filmstrip-arrow {
+  height: 126px;
+}
+.photo-filmstrip-track {
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+}
+.timeline-slider {
+  touch-action: pan-x;
+}
+
+@media (max-width: 760px) {
+  html,
+  body,
+  .app-shell,
+  .map-stage {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+
+  /* Keep the entire player (including the range slider) above Android/iOS
+     navigation/browser chrome. The old 12px bottom offset was too low on phones. */
+  .timeline-player {
+    left: 8px;
+    right: 8px;
+    bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    width: auto;
+    min-height: 84px;
+    gap: 9px;
+    padding: 10px 12px 12px;
+    z-index: 770;
+  }
+  .timeline-content {
+    min-width: 0;
+    overflow: visible;
+  }
+  .timeline-labels {
+    min-height: 20px;
+    gap: 6px;
+    margin-bottom: 3px;
+  }
+  .timeline-labels > :first-child {
+    flex: 0 0 auto;
+  }
+  .timeline-country {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+  .timeline-labels > strong {
+    flex: 0 0 auto;
+  }
+  .timeline-slider {
+    display: block !important;
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    margin: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+  .play-button {
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  /* Carousel sits above the now-raised timeline player. */
+  .photo-filmstrip {
+    left: 8px;
+    right: 8px;
+    bottom: calc(136px + env(safe-area-inset-bottom, 0px));
+    transform: none;
+    width: auto;
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 7px;
+    padding: 9px;
+    border-radius: 15px;
+    z-index: 765;
+  }
+  .photo-filmstrip.timeline-hidden {
+    bottom: calc(34px + env(safe-area-inset-bottom, 0px));
+  }
+  .photo-filmstrip-heading {
+    height: 23px;
+    font-size: 9px;
+  }
+  .photo-filmstrip-item {
+    flex: 0 0 160px;
+    width: 160px;
+    height: 120px;
+    border-radius: 10px;
+  }
+  .photo-filmstrip-arrow {
+    width: 40px;
+    height: 96px;
+    min-width: 40px;
+    font-size: 24px;
+  }
+  .photo-filmstrip-time {
+    left: 6px;
+    bottom: 6px;
+    font-size: 10px;
+  }
+
+  /* Keep the top toolbar usable on narrow phones. */
+  .map-toolbar {
+    left: 8px;
+    right: 8px;
+    top: max(8px, env(safe-area-inset-top, 0px));
+    gap: 6px;
+    padding: 6px;
+  }
+  .toolbar-button {
+    min-width: 44px;
+    height: 44px;
+  }
+  .current-title {
+    min-width: 0;
+    padding: 0 3px;
+  }
+  .current-title strong {
+    font-size: 13px;
+  }
+  .current-title .current-kicker {
+    font-size: 8px;
+  }
+  .current-title .current-countryline {
+    max-width: 100%;
+  }
+  .toolbar-button-primary {
+    max-width: 112px;
+    padding: 0 10px;
+    white-space: nowrap;
+  }
+
+  /* Make sure Leaflet zoom controls do not sit underneath the bottom UI. */
+  .leaflet-bottom.leaflet-right {
+    bottom: 106px;
+  }
+}
+
+@media (max-width: 430px) {
+  .photo-filmstrip-item {
+    flex-basis: 148px;
+    width: 148px;
+    height: 111px;
+  }
+  .photo-filmstrip-arrow {
+    width: 36px;
+    min-width: 36px;
+  }
+  .toolbar-button-primary {
+    max-width: 102px;
+    font-size: 12px;
+  }
+}
+
+@media (max-height: 620px) and (max-width: 760px) {
+  /* Landscape/small-height phones: keep controls useful without covering most of the map. */
+  .timeline-player {
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    min-height: 72px;
+  }
+  .photo-filmstrip {
+    bottom: calc(106px + env(safe-area-inset-bottom, 0px));
+  }
+  .photo-filmstrip-item {
+    flex-basis: 138px;
+    width: 138px;
+    height: 103px;
+  }
+  .photo-filmstrip-arrow {
+    height: 82px;
+  }
 }
